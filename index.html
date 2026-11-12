@@ -177,14 +177,14 @@ html.kbopen .ov{padding-bottom:calc(var(--kbh,0px) + 12px)}
 const DAYS=['Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag','Söndag'];
 const MON=['januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december'];
 const KEY='stadschema_v2';
-const R=['Rondering kl. 10','Rondering kl. 14'];
+const R=['Rondering förmiddag','Rondering eftermiddag'];
 const D=[
- [...R,'Informationsdiskar avtorkas','Sopmaskin','Stora skurmaskin','Badrumsvärlden','Belysningsvärlden','Drive-in kassa','Drive-in golv','Personalutrymmen','Sopa under hyllor etc.'],
- [...R,'Informationsdiskar','Sopmaskin','Stora skurmaskin','Badrumsvärlden','Kakel/Golv utställningar','Trädgårdscenter','Varumottagning Golv','Kontor','Konferensrum','Vilorum'],
- [...R,'Informationsdiskar avtorkas','Sopmaskin','Stora skurmaskin','Badrumsvärlden','Belysningsvärlden','Drive-in kassa','Personalutrymmen','Sopa under hyllor etc.'],
+ [...R,'Informationsdiskar & städ','Sopmaskin','Stora skurmaskin','Badrumsvärlden','Belysningsvärlden','Drive-in kassa','Drive-in golv','Personalutrymmen','Sopa i butik där maskin inte kommer åt'],
+ [...R,'Informationsdiskar','Sopmaskin','Stora skurmaskin','Badrumsvärlden','Kakel & Golv utställningar','Trädgårdscenter','Varumottagning Golv','Kontor','Konferensrum','Vilorum'],
+ [...R,'Informationsdiskar & städ','Sopmaskin','Stora skurmaskin','Badrumsvärlden','Belysningsvärlden','Drive-in kassa','Personalutrymmen','Sopa i butik där maskin inte kommer åt'],
  [...R,'Informationsdiskar','Sopmaskin','Stora skurmaskin','Badrumsvärlden'],
- [...R,'Informationsdiskar avtorkas','Sopmaskin','Stora skurmaskin','Badrumsvärlden','Sopa under hyllor etc.','Belysningsvärlden','Kakel/Golv utställningar','Trädgårdscenter','Drive-in kassa','Varumottagning Golv','Vilorum','Personalutrymmen'],
- [R[0],'Informationsdiskar','Sopmaskin','Stora skurmaskin','Badrumsvärlden','Sopa under hyllor etc.','Drive-in kassa'],
+ [...R,'Informationsdiskar & städ','Sopmaskin','Stora skurmaskin','Badrumsvärlden','Sopa i butik där maskin inte kommer åt','Belysningsvärlden','Kakel & Golv utställningar','Trädgårdscenter','Drive-in kassa','Varumottagning Golv','Vilorum','Personalutrymmen'],
+ [R[0],'Informationsdiskar','Sopmaskin','Stora skurmaskin','Badrumsvärlden','Sopa i butik där maskin inte kommer åt','Drive-in kassa'],
  ['Informationsdiskar']];
 const NAMES=[];
 const nlist=()=>S.names||(S.names=[...NAMES]);
@@ -804,6 +804,15 @@ function resetIfNew(){
   for(let i=0;i<7;i++)if(!S.days[i].extra)S.days[i].extra=[];
   if((S.mig||0)<1){for(let i=0;i<7;i++){const dd=S.days[i].day;if(!dd.some(t=>t.text==='WC Kund eftermiddag'))dd.push({text:'WC Kund eftermiddag',who:'',done:false});}S.mig=1;save();}
   if((S.mig||0)<2){const w=S.days[2],tk='Plocka skräp och byta säckar utomhus',ix=w.day.findIndex(t=>t.text===tk),mv=ix>=0?w.day.splice(ix,1)[0]:{text:tk,who:'',done:false};w.morn=w.morn.filter(t=>t.text!=='Byta säckar utomhus');if(!w.morn.some(t=>t.text===tk))w.morn.push(mv);S.mig=2;save();}
+  if((S.mig||0)<3){
+    const RN={'Rondering kl. 10':'Rondering förmiddag','Rondering kl. 14':'Rondering eftermiddag','Informationsdiskar avtorkas':'Informationsdiskar & städ','Kakel/Golv utställningar':'Kakel & Golv utställningar','Sopa under hyllor etc.':'Sopa i butik där maskin inte kommer åt'};
+    const rn=l=>(l||[]).forEach(t=>{const x=String(t.text||'').trim();if(RN[x])t.text=RN[x];});
+    for(let i=0;i<7;i++){const dy=S.days[i];rn(dy.morn);rn(dy.day);rn(dy.extra);}
+    rn(S.monthly);
+    Object.values(S.history||{}).forEach(d=>{rn(d.morn);rn(d.day);rn(d.extra);});
+    if(S.info)Object.keys(RN).forEach(o=>{const ok=o.toLowerCase(),nk=RN[o].toLowerCase();if(S.info[ok]&&!S.info[nk]){S.info[nk]=S.info[ok];delete S.info[ok];}});
+    S.mig=3;save();
+  }
   const d=iso(new Date()),m=d.slice(0,7);let ch=false;
   const clr=l=>l.forEach(t=>{t.who='';t.lock=[];t.done=false;t.warn='';t.miss=[];t.doneBy='';t.doneAt='';t.markedBy='';});
   S.history=S.history||{};
