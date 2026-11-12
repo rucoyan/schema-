@@ -6,6 +6,8 @@
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Städschema">
 <title>Städschema</title>
 <style>
@@ -57,6 +59,7 @@ h1{font-size:30px;margin:16px 0 8px}
 .addn{width:auto;flex:1;min-width:140px;font-size:18px}
 .nadd{display:flex;gap:10px;margin-top:12px}
 @media(max-width:700px){.row.ed{grid-template-columns:1fr 44px}}
+.fsb{background:none;border:1px solid var(--line);border-radius:8px;color:var(--mut);font-size:15px;line-height:1;padding:3px 8px;margin-right:8px;cursor:pointer}
 .ver{text-align:right;font-size:13px;color:var(--mut);margin:-6px 0 8px}
 .selfbtn{border:1px solid var(--acc);color:var(--acc);background:transparent;border-radius:12px;font:inherit;font-size:18px;font-weight:600;padding:8px 10px}
 .nb{display:block;width:100%;text-align:left;margin-bottom:8px}
@@ -143,7 +146,7 @@ html.kbopen .ov{padding-bottom:calc(var(--kbh,0px) + 12px)}
 </head>
 <body>
 <div class="wrap">
-  <div class="ver">Städschema Beta v1.0<span id="vcred"></span><span id="dbs"></span></div>
+  <div class="ver"><button class="fsb" id="fsb" type="button" aria-label="Helskärm" style="display:none">⛶ Helskärm</button>Städschema Beta v1.0<span id="vcred"></span></div>
   <header>
     <div id="clock">--:--:--</div>
     <div id="date"></div>
@@ -791,7 +794,7 @@ function load(){
   for(let i=0;i<7;i++)days[i]={morn:mk(i===6?m.filter(t=>!t.startsWith('Kassalinjen')):i===2?[...m.filter(t=>t!=='Byta säckar utomhus'),'Plocka skräp och byta säckar utomhus']:m),day:mk([...D[i],'WC Kund eftermiddag'])};
   return {days,monthly:mk(['Fönsterputs','Avtorka brandsläckare']),stamp:'',mstamp:''};
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){LSERR=e.name+': '+e.message;}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 function todayIdx(){return (new Date().getDay()+6)%7;}
 function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function resetIfNew(){
@@ -1067,51 +1070,24 @@ function renderLock(){
   $('lpw').addEventListener('keydown',e=>{if(e.key==='Enter')go();});
   setTimeout(()=>{const i=$('lpw');if(i)i.focus();},50);
 }
-let DIAG={},LSERR='';
-function fmtT(t){const d=new Date(t);return d.getDate()+'/'+(d.getMonth()+1)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
-function idbCount(cb){
-  try{
-    const rq=indexedDB.open('stad',1);
-    rq.onupgradeneeded=()=>rq.result.createObjectStore('k');
-    rq.onerror=()=>cb(null,rq.error&&rq.error.name);
-    rq.onsuccess=()=>{const db=rq.result,tx=db.transaction('k','readwrite'),st=tx.objectStore('k'),g=st.get('n');
-      g.onsuccess=()=>{const n=(g.result||0)+1;st.put(n,'n');tx.oncomplete=()=>{db.close();cb(n);};};
-      g.onerror=()=>cb(null,'get');};
-  }catch(e){cb(null,e.name);}
-}
-function diagStatus(){
-  const r=DIAG,e=document.getElementById('dbs');if(!e)return;
-  e.textContent=' · lagring: '+(r.lsErr?'⚠️ blockerad':'start nr '+(r.ls?r.ls.n:'?'))+' (tryck för test)';
-}
-function diagInit(){
-  const r=DIAG={};
-  try{r.origin=location.origin+' ('+location.protocol+')';}catch(e){r.origin='okänd';}
-  try{r.iframe=window.top!==window;}catch(e){r.iframe=true;}
-  r.standalone=!!navigator.standalone;
-  try{const o=JSON.parse(localStorage.getItem('stad_diag')||'null')||{n:0,first:Date.now()};o.n++;localStorage.setItem('stad_diag',JSON.stringify(o));r.ls=o;}catch(e){r.lsErr=e.name+': '+e.message;}
-  try{const m=document.cookie.match(/stad_n=(\d+)/),n=(m?+m[1]:0)+1;document.cookie='stad_n='+n+';max-age=31536000;path=/;SameSite=None;Secure';r.ck=document.cookie.includes('stad_n=')?n:null;}catch(e){r.ck=null;}
-  try{r.ss=+(sessionStorage.getItem('stad_s')||0)+1;sessionStorage.setItem('stad_s',r.ss);}catch(e){r.ss=null;}
-  idbCount((n,err)=>{r.idb=n;r.idbErr=err;});
-  try{if(navigator.storage&&navigator.storage.persisted){navigator.storage.persisted().then(v=>{r.persisted=v;});if(navigator.storage.persist)navigator.storage.persist().then(v=>{r.persistReq=v;});}}catch(e){}
-  try{if('serviceWorker' in navigator)navigator.serviceWorker.getRegistration().then(g=>{r.sw=g?(g.active?'aktiv – appen kan starta utan nät':'installeras'):'ej installerad';}).catch(()=>{r.sw='fel';});else r.sw='stöds inte här';}catch(e){r.sw='fel';}
-  diagStatus();
-  const v=document.querySelector('.ver');if(v)v.addEventListener('click',diagOpen);
-}
-function diagOpen(){
-  selfClose();SM=document.createElement('div');SM.className='ov show';
-  const r=DIAG,yn=v=>v==null?'okänt':(v?'ja':'nej');
-  const L=[['Adress (origin)',r.origin],['Inbäddad i annan sida (iframe)',yn(r.iframe)],['Startad som hemskärmsapp',yn(r.standalone)],
-   ['localStorage',r.lsErr?'FEL – '+r.lsErr:'fungerar, start nr '+r.ls.n+' (första '+fmtT(r.ls.first)+')'],
-   ['Kaka (cookie)',r.ck?'fungerar, start nr '+r.ck:'fungerar inte'],
-   ['IndexedDB',r.idb?'fungerar, start nr '+r.idb:'fungerar inte'+(r.idbErr?' ('+r.idbErr+')':'')],
-   ['sessionStorage (nollställs när fliken stängs)',r.ss?'start nr '+r.ss:'fungerar inte'],
-   ['Beständig lagring beviljad',yn(r.persisted)+' / begärd: '+yn(r.persistReq)],
-   ['Offline-stöd (service worker)',r.sw||'okänt'],
-   ['Senaste sparfel',LSERR||'inga']];
-  SM.innerHTML='<div class="modal" style="max-width:520px;max-height:85vh;overflow:auto"><h2>Lagringstest</h2>'+L.map(([a,b])=>`<p style="margin:0 0 10px"><b>${esc(a)}</b><br>${esc(b)}</p>`).join('')+'<p style="color:var(--mut);margin:0 0 10px">Stäng appen helt och öppna den igen, och öppna sedan testet. Börjar "start nr" om på 1, eller ändras adressen, sparas inget mellan starterna.</p><div class="bar" style="margin:0"><button class="btn p" id="dclose">Stäng</button></div></div>';
-  document.body.appendChild(SM);SM.querySelector('#dclose').onclick=selfClose;
-}
-resetIfNew();unlocked=!needSetup();applyTheme();render();tickClock();setInterval(tickClock,1000);diagInit();if('serviceWorker' in navigator&&location.protocol==='https:'&&window.top===window)navigator.serviceWorker.register('sw.js').catch(()=>{});['pointerdown','touchstart','keydown','scroll'].forEach(ev=>document.addEventListener(ev,()=>{lastAct=Date.now();},true));
+resetIfNew();unlocked=!needSetup();applyTheme();render();tickClock();setInterval(tickClock,1000);
+(function(){
+  const de=document.documentElement,btn=document.getElementById('fsb');
+  const standalone=window.navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+  const req=de.requestFullscreen||de.webkitRequestFullscreen;
+  if(standalone||!req||window.top!==window)return;
+  const isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+  const enter=()=>{try{const r=req.call(de);if(r&&r.catch)r.catch(()=>{});}catch(e){}};
+  const exit=()=>{try{const x=document.exitFullscreen||document.webkitExitFullscreen;if(x){const r=x.call(document);if(r&&r.catch)r.catch(()=>{});}}catch(e){}};
+  const sync=()=>{if(btn){btn.style.display=isFs()?'none':'';}};
+  if(btn){btn.onclick=e=>{e.stopPropagation();isFs()?exit():enter();};}
+  ['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev,sync));
+  sync();
+  // Första tryckningen på sidan går automatiskt till helskärm (webbläsaren kräver en användaråtgärd).
+  const first=()=>{document.removeEventListener('pointerup',first,true);if(!isFs())enter();};
+  document.addEventListener('pointerup',first,true);
+})();
+try{localStorage.removeItem('stad_diag');document.cookie='stad_n=;max-age=0;path=/';if(window.indexedDB)indexedDB.deleteDatabase('stad');}catch(e){}if('serviceWorker' in navigator&&location.protocol==='https:'&&window.top===window)navigator.serviceWorker.register('sw.js').catch(()=>{});['pointerdown','touchstart','keydown','scroll'].forEach(ev=>document.addEventListener(ev,()=>{lastAct=Date.now();},true));
 </script>
 </body>
 </html>
