@@ -513,7 +513,7 @@ function resetAllOpen(){
 function defSched(){
   const m=['Bistro','WC Kund','Entré & Vindfång','Kassalinjen','Byta säckar utomhus'];
   const days={};
-  for(let i=0;i<7;i++)days[i]={morn:mk(i===6?m.filter(t=>!t.startsWith('Kassalinjen')):i===2?[...m.filter(t=>t!=='Byta säckar utomhus'),'Plocka skräp och byta säckar utomhus']:m),day:mk([...D[i],'WC Kund eftermiddag'])};
+  for(let i=0;i<7;i++)days[i]={morn:mk(i===6?m.filter(t=>!t.startsWith('Kassalinjen')):i===2?[...m.filter(t=>t!=='Byta säckar utomhus'),'Plocka skräp och byta säckar utomhus']:m),day:mk([...D[i],'WC Kund eftermiddag']),extra:[]};
   return {days,monthly:mk(['Fönsterputs','Avtorka brandsläckare'])};
 }
 function partResetOpen(){
@@ -529,7 +529,7 @@ function partDo(k){
   const msg={day:'Nollställa dagens avbockningar och namn?',mon:'Nollställa månadsuppgifterna?',sch:'Återställa schemat till standard? Egna ändringar av uppgifterna försvinner, och avbockningar och namn nollställs också.',his:'Rensa hela historiken?',con:'Rensa alla kontakter?'}[k];
   askYes(msg,()=>{
     const clr=l=>l.forEach(t=>{t.who='';t.lock=[];t.done=false;t.warn='';t.miss=[];t.doneBy='';t.doneAt='';t.markedBy='';});
-    if(k==='day'){const d=S.days[todayIdx()];clr(d.morn);clr(d.day);}
+    if(k==='day'){const d=S.days[todayIdx()];clr(d.morn);clr(d.day);clr(d.extra||[]);}
     else if(k==='mon')clr(S.monthly);
     else if(k==='sch'){const d=defSched();S.days=d.days;S.monthly=d.monthly;}
     else if(k==='his')S.history={};
@@ -641,9 +641,9 @@ function renameUser(o,n){
   S.salt=S.salt||{};S.salt[n]=S.salt[o]||o;delete S.salt[o];
   if(S.tOff&&o in S.tOff){S.tOff[n]=S.tOff[o];delete S.tOff[o];}
   const fix=t=>{t.who=fixWho(t.who);if(t.lock)t.lock=t.lock.map(ren);if(t.doneBy)t.doneBy=ren(t.doneBy);if(t.by)t.by=ren(t.by);};
-  for(let i=0;i<7;i++){S.days[i].morn.forEach(fix);S.days[i].day.forEach(fix);}
+  for(let i=0;i<7;i++){S.days[i].morn.forEach(fix);S.days[i].day.forEach(fix);(S.days[i].extra||[]).forEach(fix);}
   (S.monthly||[]).forEach(fix);
-  Object.values(S.history||{}).forEach(d=>{(d.morn||[]).forEach(fix);(d.day||[]).forEach(fix);});
+  Object.values(S.history||{}).forEach(d=>{(d.morn||[]).forEach(fix);(d.day||[]).forEach(fix);(d.extra||[]).forEach(fix);});
   (S.msgs||[]).forEach(m=>{m.from=ren(m.from);m.to=ren(m.to);if(m.del)m.del=m.del.map(ren);if(m.readBy)m.readBy=m.readBy.map(ren);});
   if(user===o)user=n;
   save();
@@ -783,7 +783,7 @@ function themePick(){
   b.innerHTML=[['auto','🗓️ Auto (följer datum)'],...Object.keys(TH).map(k=>[k,TH[k].e+' '+TH[k].n]),['off','Inget tema']].map(([k,t])=>`<button class="btn nb" data-k="${k}">${t}</button>`).join('');
   b.onclick=e=>{const x=e.target.closest('.nb');if(!x)return;S.theme=x.dataset.k;save();selfClose();applyTheme();render();};
 }
-const SEC=[['morn','Före frukost'],['day','Under dagen'],['month','Varje månad (gäller alla dagar)']];
+const SEC=[['morn','Före frukost'],['day','Under dagen'],['extra','Extra städ'],['month','Varje månad (gäller alla dagar)']];
 let S=load(), edit=false, mode='', pendDay=null, lastDay=new Date().toDateString();
 let sel=todayIdx();
 const $=id=>document.getElementById(id);
@@ -793,7 +793,7 @@ function load(){
   try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}
   const m=['Bistro','WC Kund','Entré & Vindfång','Kassalinjen','Byta säckar utomhus'];
   const days={};
-  for(let i=0;i<7;i++)days[i]={morn:mk(i===6?m.filter(t=>!t.startsWith('Kassalinjen')):i===2?[...m.filter(t=>t!=='Byta säckar utomhus'),'Plocka skräp och byta säckar utomhus']:m),day:mk([...D[i],'WC Kund eftermiddag'])};
+  for(let i=0;i<7;i++)days[i]={morn:mk(i===6?m.filter(t=>!t.startsWith('Kassalinjen')):i===2?[...m.filter(t=>t!=='Byta säckar utomhus'),'Plocka skräp och byta säckar utomhus']:m),day:mk([...D[i],'WC Kund eftermiddag']),extra:[]};
   return {days,monthly:mk(['Fönsterputs','Avtorka brandsläckare']),stamp:'',mstamp:''};
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
@@ -801,6 +801,7 @@ function todayIdx(){return (new Date().getDay()+6)%7;}
 function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function resetIfNew(){
   S.admins=S.admins||[];
+  for(let i=0;i<7;i++)if(!S.days[i].extra)S.days[i].extra=[];
   if((S.mig||0)<1){for(let i=0;i<7;i++){const dd=S.days[i].day;if(!dd.some(t=>t.text==='WC Kund eftermiddag'))dd.push({text:'WC Kund eftermiddag',who:'',done:false});}S.mig=1;save();}
   if((S.mig||0)<2){const w=S.days[2],tk='Plocka skräp och byta säckar utomhus',ix=w.day.findIndex(t=>t.text===tk),mv=ix>=0?w.day.splice(ix,1)[0]:{text:tk,who:'',done:false};w.morn=w.morn.filter(t=>t.text!=='Byta säckar utomhus');if(!w.morn.some(t=>t.text===tk))w.morn.push(mv);S.mig=2;save();}
   const d=iso(new Date()),m=d.slice(0,7);let ch=false;
@@ -811,17 +812,17 @@ function resetIfNew(){
     if(S.stamp){
       const pi=(new Date(S.stamp+'T12:00:00').getDay()+6)%7,p=S.days[pi];
       const cp=l=>l.map(t=>({text:t.text,who:t.who,done:!!t.done,warn:t.warn||'',doneBy:t.doneBy||'',doneAt:t.doneAt||'',markedBy:t.markedBy||''}));
-      if([...p.morn,...p.day].some(t=>t.who||t.done)){
-        S.history[S.stamp]={morn:cp(p.morn),day:cp(p.day)};
+      if([...p.morn,...p.day,...(p.extra||[])].some(t=>t.who||t.done)){
+        S.history[S.stamp]={morn:cp(p.morn),day:cp(p.day),extra:cp(p.extra||[])};
         Object.keys(S.history).sort().slice(0,-90).forEach(k=>delete S.history[k]);
       }
     }
-    for(let i=0;i<7;i++){clr(S.days[i].morn);clr(S.days[i].day);}S.stamp=d;ch=true;
+    for(let i=0;i<7;i++){clr(S.days[i].morn);clr(S.days[i].day);clr(S.days[i].extra||[]);}S.stamp=d;ch=true;
   }
   if(S.mstamp!==m){clr(S.monthly);S.mstamp=m;ch=true;}
   if(ch)save();
 }
-function arr(s){return s==='month'?S.monthly:S.days[sel][s];}
+function arr(s){return s==='month'?S.monthly:(S.days[sel][s]||(S.days[sel][s]=[]));}
 function weekNo(d){
   const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
   const n=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-n);
@@ -846,7 +847,6 @@ let user=null,lastAct=Date.now(),setOn=false,usersOn=false;
 const isAdmin=n=>(S.admins||[]).includes(n===undefined?user:n);
 const isPlanner=n=>(S.planners||[]).includes(n===undefined?user:n);
 const canPlan=n=>isAdmin(n)||isPlanner(n);
-const TITLES=['Områdeschef','Driftledare','Teamledare','Övrigt'];
 function monthDue(){return (S.monthly||[]).some(t=>!t.done);}
 function renderMonth(){
   $('tabs').innerHTML='';
@@ -859,15 +859,15 @@ function renderContacts(){
   $('tabs').innerHTML='';
   $('title').textContent='Kontaktuppgifter';
   const c=S.contacts||(S.contacts=[]);
-  const opts=v=>'<option value="">— Välj titel —</option>'+TITLES.map(t=>`<option value="${t}" ${t===v?'selected':''}>${t}</option>`).join('');
   if(setOn&&isAdmin()){
-    $('body').innerHTML=c.map((x,i)=>`<div class="row ced"><input class="in" placeholder="Namn" value="${esc(x.name)}" data-ci="${i}" data-cf="name"><input class="in" type="tel" placeholder="Telefonnummer" value="${esc(x.phone)}" data-ci="${i}" data-cf="phone"><select class="in" data-ci="${i}" data-cf="title">${opts(x.title)}</select><button class="cdel" data-ci="${i}">✕</button></div>`).join('')+'<button class="btn" id="cadd" style="margin-top:14px">+ Lägg till kontakt</button>';
+    $('body').innerHTML=c.map((x,i)=>`<div class="row ced"><input class="in" placeholder="Namn" value="${esc(x.name)}" data-ci="${i}" data-cf="name"><input class="in" type="tel" placeholder="Telefonnummer" value="${esc(x.phone)}" data-ci="${i}" data-cf="phone"><input class="in" placeholder="Titel" maxlength="40" value="${esc(x.title)}" data-ci="${i}" data-cf="title"><button class="cdel" data-ci="${i}">✕</button></div>`).join('')+'<button class="btn" id="cadd" style="margin-top:14px">+ Lägg till kontakt</button>';
     $('bar').innerHTML='<button class="btn p" id="bBack">← Tillbaka</button>';
   }else{
-    const h=TITLES.map(g=>{
-      const l=c.filter(x=>(TITLES.includes(x.title)?x.title:'Övrigt')===g);
-      if(!l.length)return '';
-      return `<h2>${g}</h2>`+l.map(x=>`<div class="row"><div>${esc(x.name)}</div><div class="who">${x.phone?`<a class="tel" href="tel:${esc(x.phone.replace(/[^+\d]/g,''))}">${esc(x.phone)}</a>`:''}</div></div>`).join('');
+    const groups=[],gi=Object.create(null);
+    c.forEach(x=>{const t=(x.title||'').trim(),k=t.toLowerCase();if(!(k in gi)){gi[k]=groups.length;groups.push({t,l:[]});}groups[gi[k]].l.push(x);});
+    const h=groups.map(g=>{
+      const l=g.l;
+      return (g.t?`<h2>${esc(g.t)}</h2>`:'')+l.map(x=>`<div class="row"><div>${esc(x.name)}</div><div class="who">${x.phone?`<a class="tel" href="tel:${esc(x.phone.replace(/[^+\d]/g,''))}">${esc(x.phone)}</a>`:''}</div></div>`).join('');
     }).join('');
     $('body').innerHTML=h||'<div class="empty">Inga kontaktuppgifter ännu. Tryck på Redigera kontakter för att lägga till.</div>';
     $('bar').innerHTML='<button class="btn p" id="bBack">← Tillbaka</button>';
@@ -890,7 +890,7 @@ function renderHist(){
   $('tabs').innerHTML=ks.length?`<select class="in" id="hsel" style="grid-column:1/-1;font-size:22px">${ks.map(k=>`<option value="${k}" ${k===hd?'selected':''}>${fmt(k)}</option>`).join('')}</select>`:'';
   $('title').textContent='Historik'+(hd?' – '+fmt(hd):'');
   if(!hd)$('body').innerHTML='<div class="empty">Ingen historik än. Dagar sparas automatiskt vid midnatt.</div>';
-  else{const h=S.history[hd];$('body').innerHTML=[['morn','Före frukost'],['day','Under dagen']].map(([s,hh])=>`<h2>${hh}</h2>`+h[s].map(t=>`<div class="row chk ${t.done?(t.warn?'warn':'done'):''}" style="cursor:default"><div class="box">${t.done?(t.warn?'!':'✓'):'✕'}</div><div>${esc(t.text)}${t.done&&t.doneBy?`<div class="by${t.warn?' wn':''}">${t.warn?'⚠ '+esc(t.warn)+' – utförd av ':'✓ Klar av '}${esc(t.doneBy)}${t.markedBy&&t.markedBy!==t.doneBy?' (registrerad av '+esc(t.markedBy)+')':''}${t.doneAt?' · '+esc(t.doneAt):''}</div>`:''}</div><div class="who">${esc(t.who)}</div></div>`).join('')).join('');}
+  else{const h=S.history[hd];$('body').innerHTML=[['morn','Före frukost'],['day','Under dagen'],['extra','Extra städ']].filter(([s])=>(h[s]||[]).length).map(([s,hh])=>`<h2>${hh}</h2>`+h[s].map(t=>`<div class="row chk ${t.done?(t.warn?'warn':'done'):''}" style="cursor:default"><div class="box">${t.done?(t.warn?'!':'✓'):'✕'}</div><div>${esc(t.text)}${t.done&&t.doneBy?`<div class="by${t.warn?' wn':''}">${t.warn?'⚠ '+esc(t.warn)+' – utförd av ':'✓ Klar av '}${esc(t.doneBy)}${t.markedBy&&t.markedBy!==t.doneBy?' (registrerad av '+esc(t.markedBy)+')':''}${t.doneAt?' · '+esc(t.doneAt):''}</div>`:''}</div><div class="who">${esc(t.who)}</div></div>`).join('')).join('');}
   $('bar').innerHTML='<button class="btn p" id="bBack">← Tillbaka</button>';
 }
 $('tabs').addEventListener('change',e=>{if(e.target.id==='hsel'){hd=e.target.value;render();}});
@@ -906,10 +906,10 @@ function render(){
   if(contactsOn){renderContacts();return;}
   if(setOn&&!edit){renderSettings();return;}
   $('tabs').innerHTML=!user?'':DAYS.map((d,i)=>`<button class="tab ${i===sel?'on':''} ${i===todayIdx()?'today':''} ${(dateOf(i).getDay()===0||holiday(dateOf(i)))?'red':''}" data-i="${i}">${d.slice(0,3)}<br><small>${dateOf(i).getDate()}/${dateOf(i).getMonth()+1}</small></button>`).join('');
-  const dl=[...S.days[sel].morn,...S.days[sel].day];
+  const dl=[...S.days[sel].morn,...S.days[sel].day,...(S.days[sel].extra||[])];
   const dt=dateOf(sel),hol=holiday(dt),red=dt.getDay()===0||hol;
   $('title').innerHTML='<span class="'+(red?'red':'')+'">'+DAYS[sel]+' '+dt.getDate()+' '+MON[dt.getMonth()]+'</span>'+(sel===todayIdx()?' – idag':'')+(hol?' · <span class="red">'+hol+'</span>':'')+' · '+dl.filter(t=>t.done).length+'/'+dl.length+' klara';
-  $('body').innerHTML=SEC.filter(([s])=>edit||s!=='month').map(([s,h])=>{
+  $('body').innerHTML=SEC.filter(([s])=>edit||(s!=='month'&&(s!=='extra'||arr(s).length))).map(([s,h])=>{
     const l=arr(s);let rows;
     if(!edit)rows=l.length?l.map((t,k)=>`<div class="row chk ${t.done?(t.warn?'warn':'done'):''}" data-s="${s}" data-k="${k}"><div class="box">${t.done?(t.warn?'!':'✓'):'✕'}</div><div class="ttxt">${esc(t.text)}${hasInfo(t)?' <button class="inf" aria-label="Visa information">ℹ️</button>':''}${t.done&&t.doneBy?`<div class="by${t.warn?' wn':''}">${t.warn?'⚠ '+esc(t.warn)+' – utförd av ':'✓ Klar av '}${esc(t.doneBy)}${t.markedBy&&t.markedBy!==t.doneBy?' (registrerad av '+esc(t.markedBy)+')':''}${t.doneAt?' · '+esc(t.doneAt):''}</div>`:''}</div><div class="who">${esc(t.who)}</div><div class="sbtns">${canPlan()?'':`<button class="selfbtn" data-s="${s}" data-k="${k}">${selfLbl(t)}</button>`}${canPlan()?`<button class="assbtn" data-s="${s}" data-k="${k}">👥 Lägg till</button>`:''}</div></div>`).join(''):'<div class="empty">Inga uppgifter</div>';
     else rows=l.map((t,k)=>`<div class="row ed"><input class="in" value="${esc(t.text)}" placeholder="Uppgift" data-s="${s}" data-k="${k}" data-f="text"${isAdmin()||t.by===user?'':' disabled'}>${isAdmin()||t.by===user?`<button class="del" data-s="${s}" data-k="${k}">✕</button>`:'<span></span>'}</div>`).join('')+`<button class="btn add" data-s="${s}">+ Lägg till</button>`;
