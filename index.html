@@ -640,7 +640,7 @@ function renameUser(o,n){
   if(S.pws&&o in S.pws){S.pws[n]=S.pws[o];delete S.pws[o];}
   S.salt=S.salt||{};S.salt[n]=S.salt[o]||o;delete S.salt[o];
   if(S.tOff&&o in S.tOff){S.tOff[n]=S.tOff[o];delete S.tOff[o];}
-  const fix=t=>{t.who=fixWho(t.who);if(t.lock)t.lock=t.lock.map(ren);if(t.doneBy)t.doneBy=ren(t.doneBy);if(t.by)t.by=ren(t.by);};
+  const fix=t=>{t.who=fixWho(t.who);if(t.lock)t.lock=t.lock.map(ren);if(t.doneBy)t.doneBy=fixWho(t.doneBy);if(t.markedBy)t.markedBy=ren(t.markedBy);if(t.by)t.by=ren(t.by);};
   for(let i=0;i<7;i++){S.days[i].morn.forEach(fix);S.days[i].day.forEach(fix);(S.days[i].extra||[]).forEach(fix);}
   (S.monthly||[]).forEach(fix);
   Object.values(S.history||{}).forEach(d=>{(d.morn||[]).forEach(fix);(d.day||[]).forEach(fix);(d.extra||[]).forEach(fix);});
@@ -980,22 +980,24 @@ $('body').addEventListener('click',e=>{
   if(c&&!edit&&!histOn){
     const t=arr(c.dataset.s)[+c.dataset.k];
     if(!e.target.closest('.box')){if(isAdmin()||hasInfo(t))openInfo(c.dataset.s,+c.dataset.k);return;}
-    const un=()=>{const who=t.markedBy||t.doneBy;if(who&&who!==user&&!canPlan()){infoBox('Bara '+who+', en planerare eller en administratör kan ta bort bocken.');return;}t.done=false;t.doneBy='';t.doneAt='';t.warn='';t.markedBy='';save();render();};
+    const un=()=>{if(!canPlan()&&t.markedBy!==user&&!whoArr(t.doneBy).includes(user)){infoBox('Bara '+(whoArr(t.doneBy).join(', ')||'den som bockade')+', en planerare eller en administratör kan ta bort bocken.');return;}t.done=false;t.doneBy='';t.doneAt='';t.warn='';t.markedBy='';save();render();};
     const M=machineInfo(t.text);
+    const nm=whoArr(t.who),ok=canPlan()||nm.includes(user),by0=nm.length?nm.join(', '):user,mb0=(!nm.length||(nm.length===1&&nm[0]===user))?'':user;
+    const noMsg=()=>infoBox('Du kan bara bocka av uppgifter som du är inlagd i. Tryck på "+ Jag" först.');
     const fin=(by,miss,first)=>{
       const w=miss.length?M.name+' är '+miss.map(k=>M.qs.find(x=>x.k===k).w).join(' och '):'';
-      if(first||!miss.length){t.doneBy=by;t.doneAt=hm();t.markedBy=by!==user?user:'';}
+      if(first||!miss.length){t.doneBy=by;t.doneAt=hm();t.markedBy=mb0;}
       t.done=true;t.miss=miss;t.warn=w;save();render();
       if(miss.length&&first)infoBox('Obs! '+w+'. Tryck på uppgiften igen när det är gjort.');
     };
     const go=by=>{
       if(M){askSeq(M.qs,0,[],m=>fin(by,m,true),null);return;}
-      t.done=true;t.warn='';t.miss=[];t.doneBy=by;t.doneAt=hm();t.markedBy=by!==user?user:'';save();render();
+      t.done=true;t.warn='';t.miss=[];t.doneBy=by;t.doneAt=hm();t.markedBy=mb0;save();render();
     };
-    if(t.done&&t.warn&&M){const qs=(t.miss&&t.miss.length)?M.qs.filter(x=>t.miss.includes(x.k)):M.qs;askSeq(qs,0,[],m=>fin(user,m,false),un);return;}
+    if(t.done&&t.warn&&M){if(!ok){noMsg();return;}const qs=(t.miss&&t.miss.length)?M.qs.filter(x=>t.miss.includes(x.k)):M.qs;askSeq(qs,0,[],m=>fin(by0,m,false),un);return;}
     if(t.done){un();return;}
-    if(canPlan()){pickWho(t,go);return;}
-    go(user);return;}
+    if(!ok){noMsg();return;}
+    go(by0);return;}
   const x=e.target.closest('.cx');
   if(x){const cell=x.closest('.whoc'),t=arr(cell.dataset.s)[+cell.dataset.k],a=whoArr(t.who);const rn=a.splice(+x.dataset.j,1)[0];t.lock=(t.lock||[]).filter(n=>n!==rn);t.who=a.join(', ');save();refreshWho(cell);return;}
   const nx=e.target.closest('.nx');
