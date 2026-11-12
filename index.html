@@ -982,8 +982,8 @@ $('body').addEventListener('click',e=>{
     if(!e.target.closest('.box')){if(isAdmin()||hasInfo(t))openInfo(c.dataset.s,+c.dataset.k);return;}
     const un=()=>{if(!canPlan()&&t.markedBy!==user&&!whoArr(t.doneBy).includes(user)){infoBox('Bara '+(whoArr(t.doneBy).join(', ')||'den som bockade')+', en planerare eller en administratör kan ta bort bocken.');return;}t.done=false;t.doneBy='';t.doneAt='';t.warn='';t.markedBy='';save();render();};
     const M=machineInfo(t.text);
-    const nm=whoArr(t.who),ok=canPlan()||nm.includes(user),by0=nm.length?nm.join(', '):user,mb0=(!nm.length||(nm.length===1&&nm[0]===user))?'':user;
-    const noMsg=()=>infoBox('Du kan bara bocka av uppgifter som du är inlagd i. Tryck på "+ Jag" först.');
+    const nm=whoArr(t.who),ok=true,by0=nm.length?nm.join(', '):user,mb0=(!nm.length||(nm.length===1&&nm[0]===user))?'':user;
+    const noMsg=()=>{};
     const fin=(by,miss,first)=>{
       const w=miss.length?M.name+' är '+miss.map(k=>M.qs.find(x=>x.k===k).w).join(' och '):'';
       if(first||!miss.length){t.doneBy=by;t.doneAt=hm();t.markedBy=mb0;}
