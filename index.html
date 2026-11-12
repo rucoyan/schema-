@@ -1087,6 +1087,24 @@ resetIfNew();unlocked=!needSetup();applyTheme();render();tickClock();setInterval
   const first=()=>{document.removeEventListener('pointerup',first,true);if(!isFs())enter();};
   document.addEventListener('pointerup',first,true);
 })();
+// Uppdatering: när appen kommer tillbaka i förgrunden kollar den om det finns en ny version och laddar då om.
+(function(){
+  if(location.protocol!=='https:'||window.top!==window||!window.fetch)return;
+  const sig=()=>fetch('index.html',{cache:'no-store'}).then(r=>r.ok?r.text():null).then(t=>{if(!t)return null;let x=0;for(let i=0;i<t.length;i++)x=(x*31+t.charCodeAt(i))|0;return t.length+':'+x;}).catch(()=>null);
+  let base=null,busy=false;
+  sig().then(v=>{base=v;});
+  const check=()=>{
+    if(busy||!base||document.visibilityState!=='visible')return;
+    busy=true;
+    sig().then(v=>{
+      busy=false;
+      const a=document.activeElement;
+      if(v&&v!==base&&!(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')))location.reload();
+    });
+  };
+  document.addEventListener('visibilitychange',check);
+  window.addEventListener('pageshow',check);
+})();
 try{localStorage.removeItem('stad_diag');document.cookie='stad_n=;max-age=0;path=/';if(window.indexedDB)indexedDB.deleteDatabase('stad');}catch(e){}if('serviceWorker' in navigator&&location.protocol==='https:'&&window.top===window)navigator.serviceWorker.register('sw.js').catch(()=>{});['pointerdown','touchstart','keydown','scroll'].forEach(ev=>document.addEventListener(ev,()=>{lastAct=Date.now();},true));
 </script>
 </body>

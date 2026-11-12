@@ -1,5 +1,5 @@
 // Städschema – offline-stöd. Hämtar nyaste versionen när det finns nät, annars används den sparade kopian.
-const CACHE = 'stadschema-v1';
+const CACHE = 'stadschema-v2';
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -22,7 +22,7 @@ self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if (u.origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-store' })
       .then(r => {
         if (r && r.ok) {
           const copy = r.clone();
