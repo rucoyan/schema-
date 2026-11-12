@@ -7,7 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-title" content="Städschema">
 <title>Städschema</title>
 <style>
@@ -59,7 +60,7 @@ h1{font-size:30px;margin:16px 0 8px}
 .addn{width:auto;flex:1;min-width:140px;font-size:18px}
 .nadd{display:flex;gap:10px;margin-top:12px}
 @media(max-width:700px){.row.ed{grid-template-columns:1fr 44px}}
-.fsb{background:none;border:1px solid var(--line);border-radius:8px;color:var(--mut);font-size:15px;line-height:1;padding:3px 8px;margin-right:8px;cursor:pointer}
+#sbmask{position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:#fff;z-index:2147483000;pointer-events:none}
 .ver{text-align:right;font-size:13px;color:var(--mut);margin:-6px 0 8px}
 .selfbtn{border:1px solid var(--acc);color:var(--acc);background:transparent;border-radius:12px;font:inherit;font-size:18px;font-weight:600;padding:8px 10px}
 .nb{display:block;width:100%;text-align:left;margin-bottom:8px}
@@ -145,8 +146,9 @@ html.kbopen .ov{padding-bottom:calc(var(--kbh,0px) + 12px)}
 </style>
 </head>
 <body>
+<div id="sbmask"></div>
 <div class="wrap">
-  <div class="ver"><button class="fsb" id="fsb" type="button" aria-label="Helskärm" style="display:none">⛶ Helskärm</button>Städschema Beta v1.0<span id="vcred"></span></div>
+  <div class="ver">Städschema Beta v1.0<span id="vcred"></span></div>
   <header>
     <div id="clock">--:--:--</div>
     <div id="date"></div>
@@ -1071,22 +1073,6 @@ function renderLock(){
   setTimeout(()=>{const i=$('lpw');if(i)i.focus();},50);
 }
 resetIfNew();unlocked=!needSetup();applyTheme();render();tickClock();setInterval(tickClock,1000);
-(function(){
-  const de=document.documentElement,btn=document.getElementById('fsb');
-  const standalone=window.navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
-  const req=de.requestFullscreen||de.webkitRequestFullscreen;
-  if(standalone||!req||window.top!==window)return;
-  const isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
-  const enter=()=>{try{const r=req.call(de);if(r&&r.catch)r.catch(()=>{});}catch(e){}};
-  const exit=()=>{try{const x=document.exitFullscreen||document.webkitExitFullscreen;if(x){const r=x.call(document);if(r&&r.catch)r.catch(()=>{});}}catch(e){}};
-  const sync=()=>{if(btn){btn.style.display=isFs()?'none':'';}};
-  if(btn){btn.onclick=e=>{e.stopPropagation();isFs()?exit():enter();};}
-  ['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev,sync));
-  sync();
-  // Första tryckningen på sidan går automatiskt till helskärm (webbläsaren kräver en användaråtgärd).
-  const first=()=>{document.removeEventListener('pointerup',first,true);if(!isFs())enter();};
-  document.addEventListener('pointerup',first,true);
-})();
 // Uppdatering: när appen kommer tillbaka i förgrunden kollar den om det finns en ny version och laddar då om.
 (function(){
   if(location.protocol!=='https:'||window.top!==window||!window.fetch)return;
